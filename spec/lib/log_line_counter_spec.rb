@@ -18,12 +18,12 @@ describe LogLineCounter do
       @counter = LogLineCounter.new(:log_file => 'file.log')
     end
 
-    it 'should return as an integer' do
+    it 'should return an integer' do
       @counter.stub!(:'`' => '42\n')
       @counter.count(/junk/).should == 42
     end
 
-    it 'should leverage os commands to get the count' do
+    it 'should leverage *nix commands to get the count' do
       @counter.should_receive(:'`').with(/cat file.log.*\|.*egrep.*junk.*\|.*wc -l/)
       @counter.count(/junk/)
     end

@@ -2,23 +2,53 @@ require 'spec/spec_helper'
 
 describe ResponseCodeChecker do
   before :each do
-    @counter = mock('LogLineCounter')
+    @counter        = mock('LogLineCounter')
+    @counter_store  = mock('CounterStore', :save => nil, :last => 0)
+    @notifier       = mock('Notifier', :notify => nil)
     @checker = ResponseCodeChecker.new(:response_codes => [200],
-                                              :counter => @counter)
+                                       :counter => @counter,
+                                       :counter_store => @counter_store,
+                                       :notifier      => @notifier)
   end
 
   describe 'perform_check' do
-    it 'should save the count to a file' do
+    it 'should save the count' do
       @counter.stub!(:count => 52)
-      @checker.should_receive(:'`').with(/echo 52/)
+      @counter_store.should_receive(:save).with(52)
       @checker.perform_check
     end
 
-    it 'should save to a file with the response_codes in the filename' do
-      @counter.stub!(:count => 52)
-      @checker.response_codes = [200,302]
-      @checker.should_receive(:'`').with(/200_302/)
-      @checker.perform_check
+    describe 'when current count > threshold' do
+      it 'should notify' do
+        @counter_store.stub!(:last => 5)
+        @counter.stub!(:count => 10)
+
+        @checker.threshold = 4
+        @notifier.should_receive(:notify)
+        @checker.perform_check
+      end
+    end
+
+    describe 'when current count == threshold' do
+      it 'should notify' do
+        @counter_store.stub!(:last => 5)
+        @counter.stub!(:count => 10)
+
+        @checker.threshold = 5
+        @notifier.should_receive(:notify)
+        @checker.perform_check
+      end
+    end
+
+    describe 'when current count < last_count' do
+      it 'should not notify' do
+        @counter_store.stub!(:last => 5)
+        @counter.stub!(:count => 10)
+
+        @checker.threshold = 6
+        @notifier.should_not_receive(:notify)
+        @checker.perform_check
+      end
     end
   end
 

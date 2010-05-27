@@ -1,15 +1,20 @@
 class ResponseCodeChecker
-  attr_accessor :response_codes, :counter, :notifier
+  attr_accessor :response_codes, :counter, :notifier, :counter_store, :threshold
 
   def initialize(opts = {})
-    @threshold = opts[:threshold] || 5
+    @threshold = opts[:threshold] || 1
     @counter   = opts[:counter]   || LogLineCounter.new(opts)
+    @notifier  = opts[:notifier]  || SendmailNotifier.new
 
     @response_codes = opts[:response_codes]
+    @counter_store  = opts[:counter_store] || CounterFileStore.new(file_name)
   end
 
   def perform_check
-    record_count
+    if should_notify?
+      notifier.notify
+    end
+    counter_store.save(count)
   end
 
   def count
@@ -18,12 +23,12 @@ class ResponseCodeChecker
 
 protected
 
-  def regex
-    / (#{response_codes.join('|')}) [0-9+]/
+  def should_notify?
+    (count - counter_store.last) >= threshold
   end
 
-  def record_count
-    `echo #{count} > #{file_name}`
+  def regex
+    / (#{response_codes.join('|')}) [0-9+]/
   end
 
   def file_name
@@ -31,15 +36,4 @@ protected
     "/tmp/response_count_#{suffix}"
   end
 
-  # def should_notify?
-  #   (count - last_count) >= threshold
-  # end
-
-  # def last_count
-  #   @_last_count ||= if File.exist?(file_name)
-  #                 `cat #{file_name}`.to_i
-  #               else
-  #                 0
-  #               end
-  # end
 end
