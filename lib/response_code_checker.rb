@@ -4,7 +4,9 @@ class ResponseCodeChecker
   def initialize(opts = {})
     @threshold = opts[:threshold] || 1
     @counter   = opts[:counter]   || LogLineCounter.new(opts)
-    @notifier  = opts[:notifier]  || SendmailNotifier.new
+    @notifier  = opts[:notifier]  || SendmailNotifier.new(opts[:to],
+                                                          opts[:from],
+                                                          opts[:subject])
 
     @response_codes = opts[:response_codes]
     @counter_store  = opts[:counter_store] || CounterFileStore.new(file_name)
@@ -12,7 +14,7 @@ class ResponseCodeChecker
 
   def perform_check
     if should_notify?
-      notifier.notify
+      send_notification
     end
     counter_store.save(count)
   end
@@ -20,11 +22,23 @@ class ResponseCodeChecker
   def count
     @_count ||= counter.count(regex)
   end
+  
+  def new_hits
+    count - last_count
+  end
 
 protected
 
+  def send_notification
+    notifier.notify(self)
+  end
+
   def should_notify?
-    (count - counter_store.last) >= threshold
+    new_hits >= threshold
+  end
+  
+  def last_count
+    @_last_count ||= counter_store.last
   end
 
   def regex

@@ -24,7 +24,7 @@ describe ResponseCodeChecker do
         @counter.stub!(:count => 10)
 
         @checker.threshold = 4
-        @notifier.should_receive(:notify)
+        @notifier.should_receive(:notify).with(@checker)
         @checker.perform_check
       end
     end
@@ -35,7 +35,7 @@ describe ResponseCodeChecker do
         @counter.stub!(:count => 10)
 
         @checker.threshold = 5
-        @notifier.should_receive(:notify)
+        @notifier.should_receive(:notify).with(@checker)
         @checker.perform_check
       end
     end
